@@ -13,6 +13,8 @@ RED = 255, 0, 0
 GREEN = 0, 255, 0
 BLUE = 0, 0, 255
 
+SESSION_FILE_NAME = 'session.bf'
+SCORE_FILE_NAME = 'score.bf'
 
 class Food(object):
     def __init__(self, surface, bulk=3):
@@ -103,8 +105,8 @@ class BaseSnake(object):
 
 
 class Player(BaseSnake):
-    def __init__(self, playername, controls, *args):
-        self.playername = playername
+    def __init__(self, name, controls, *args):
+        self.name = name
         self.lives = 3
         self.playing = True
         self.up, self.down, self.left, self.right = controls
@@ -190,7 +192,7 @@ class MainApp(object):
         textxpos = 0
         for player in self.players:
             lives = player.lives or 'DEAD'
-            playerscore = "%s(%s): %sp" % (player.playername, lives, player.score)
+            playerscore = "%s(%s): %sp" % (player.name, lives, player.score)
             playerstatus = self.font.render(playerscore, True, player.color)
             if drawn_players:
                 textxpos += drawn_players[-1].get_size()[0] + 10
@@ -209,7 +211,8 @@ class MainApp(object):
                         self.font.render('Press 2 for 2-player mode.', True, GREEN),
                         self.font.render('Player 1 controls: directional keys;', True, GREEN),
                         self.font.render('Player 2 controls: WSAD keys.', True, GREEN),
-                        self.font.render('ESC = exit game', True, GREEN)]
+                        self.font.render('ESC = exit game', True, GREEN),
+                        self.font.render('F1 = view high scores', True, GREEN)]
 
         if self.game_status_is_saved():
             text = 'Press c to continue previous game'
@@ -233,24 +236,26 @@ class MainApp(object):
                     if event.key == pygame.K_1:
                         self.add_player(player1)
                         selection_done = True
-                    if event.key == pygame.K_2:
+                    elif event.key == pygame.K_2:
                         self.add_player(player1)
                         self.add_player(player2)
                         selection_done = True
-                    if self.game_status_is_saved() and event.key == pygame.K_c:
+                    elif self.game_status_is_saved() and event.key == pygame.K_c:
                         self.load_game_status()
                         return self.startgame(pause=True)
-                    if event.key == pygame.K_ESCAPE:
+                    elif event.key == pygame.K_F1:
+                        return self.score_page()
+                    elif event.key == pygame.K_ESCAPE:
                         sys.exit(1)
         return self.startgame()
 
     def game_status_is_saved(self):
-        return os.path.isfile('session.bf')
+        return os.path.isfile(SESSION_FILE_NAME)
     
     def save_game_status(self):
         data = {'players': [], 'food': []}
         for player in self.players:
-            pdata = {'name': player.playername,
+            pdata = {'name': player.name,
                      'controls': (player.up, player.down, player.left, player.right),
                      'startpos': player.startpos,
                      'color': player.color,
@@ -278,11 +283,11 @@ class MainApp(object):
                      }
             data['food'].append(fdata)
         
-        session_file = open('session.bf', 'wb')
+        session_file = open(SESSION_FILE_NAME, 'wb')
         pickle.dump(data, session_file)
     
     def load_game_status(self):
-        session_file = open('session.bf', 'rb')
+        session_file = open(SESSION_FILE_NAME, 'rb')
         data = pickle.load(session_file)
         for player in data['players']:
             pobj = Player(player['name'], player['controls'], self.screen, player['startpos'], player['color'], player['initlength'])
@@ -377,6 +382,7 @@ class MainApp(object):
                 self.pause()
                 pause = False
         if not self.running:
+            self.save_scores()
             self.play_again()
 
     def play_again(self):
@@ -402,5 +408,62 @@ class MainApp(object):
             player.full_reset()
         self.food = []
 
+    def score_page(self):
+        self.screen.fill(BLACK)
+
+        scores = self.load_scores()
+        scoretext = []
+        i = 1
+        for name, score in scores:
+            scoretext.append(self.font.render('%s: %s - %s' % (i, name, score), True, GREEN))
+            i += 1
+
+        textposx = self.width / 3
+        textposy = self.height / 4
+        for qi in range(0, len(scoretext)):
+            score = scoretext[qi]
+            self.screen.blit(score, (textposx, textposy))
+            textposy += score.get_size()[1] + 5
+
+        pygame.display.flip()
+        showing_scores = True
+        while showing_scores:
+            self.clock.tick(self.framerate)
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    showing_scores = False
+                    sys.exit(1)
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        showing_scores = False
+                        return self.run()
+
+    def load_scores(self):
+        if os.path.isfile(SCORE_FILE_NAME):
+            scores = pickle.load(open(SCORE_FILE_NAME, 'rb'))
+        else:
+            scores = []
+            for i in range(0, 10):
+                scores.append(('NOBODY', 0))
+        return sorted(scores, cmp=lambda x, y: y[1] - x[1])
+
+    def save_scores(self):
+        scores = self.load_scores()
+        for player in self.players:
+            for i in range(0, len(scores)):
+                if scores[i][1] >= player.score:
+                    continue
+                else:
+                    scores.insert(i, (player.name, player.score))
+                    scores.pop()
+                    break
+        pickle.dump(scores, open(SCORE_FILE_NAME, 'wb'))
+
 game = MainApp()
 game.run()
+
+#todo:
+# food moves
+# food can kill snake if it touches it's body and not it's mouth
+# two player co-op mode with shared score
+# players can input names
