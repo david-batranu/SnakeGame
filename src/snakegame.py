@@ -1,9 +1,9 @@
 import pygame
+pygame.init()
 import random
 import os
 import sys
 import pickle
-pygame.font.init()
 
 
 #colors
@@ -56,10 +56,11 @@ class Food(object):
 
 class BaseSnake(object):
 
-    def __init__(self, surface, startpos, color, length=10):
+    def __init__(self, surface, startpos, color, initlength=10):
         self.surface = surface
         self.startpos = startpos
-        self.length = length
+        self.initlength = initlength
+        self.length = initlength
         self.body = []
         self.x, self.y = startpos
         self.dir_x = 0
@@ -115,6 +116,11 @@ class Player(BaseSnake):
         self.dir_x, self.dir_y = 0, -1
         self.score = 0
         self.crashed = self.playing = True
+    
+    def full_reset(self):
+        self.reset()
+        self.length = self.initlength
+        self.lives = 3
 
     def handle_crash(self):
         self.lives -= 1
@@ -161,6 +167,7 @@ class MainApp(object):
     framerate = 60
     gamewidth = width
     gameheight = height - statusarea
+    font = pygame.font.Font('freesansbold.ttf', 18)
 
     def add_player(self, player):
         self.players.append(player)
@@ -179,13 +186,12 @@ class MainApp(object):
         pygame.draw.rect(self.screen, WHITE, (0, 0, self.gamewidth, self.gameheight), 1)
 
     def draw_status_area(self):
-        font = pygame.font.Font(None, 25)
         drawn_players = []
         textxpos = 0
         for player in self.players:
             lives = player.lives or 'DEAD'
             playerscore = "%s(%s): %sp" % (player.playername, lives, player.score)
-            playerstatus = font.render(playerscore, True, player.color)
+            playerstatus = self.font.render(playerscore, True, player.color)
             if drawn_players:
                 textxpos += drawn_players[-1].get_size()[0] + 10
             self.screen.blit(playerstatus, (textxpos, self.gameheight + 5))
@@ -198,17 +204,16 @@ class MainApp(object):
         player1 = Player('Player 1', p1_controls, self.screen, (self.gamewidth/2, self.gameheight/2), WHITE, 50)
         player2 = Player('Player 2', p2_controls, self.screen, (self.gamewidth/3, self.gameheight/3), RED, 50)
 
-        font = pygame.font.Font(None, 25)
         self.screen.fill(BLACK)
-        questiontext = [font.render('Press 1 for singleplayer', True, GREEN),
-                        font.render('Press 2 for 2-player mode.', True, GREEN),
-                        font.render('Player 1 controls: directional keys;', True, GREEN),
-                        font.render('Player 2 controls: WSAD keys.', True, GREEN),
-                        font.render('ESC = exit game', True, GREEN)]
+        questiontext = [self.font.render('Press 1 for singleplayer', True, GREEN),
+                        self.font.render('Press 2 for 2-player mode.', True, GREEN),
+                        self.font.render('Player 1 controls: directional keys;', True, GREEN),
+                        self.font.render('Player 2 controls: WSAD keys.', True, GREEN),
+                        self.font.render('ESC = exit game', True, GREEN)]
 
         if self.game_status_is_saved():
             text = 'Press c to continue previous game'
-            questiontext.insert(-2, font.render(text, True, GREEN))
+            questiontext.insert(-1, self.font.render(text, True, GREEN))
         
         textposx = self.width / 3
         textposy = self.height / 4
@@ -222,6 +227,8 @@ class MainApp(object):
         while not selection_done:
             self.clock.tick(self.framerate)
             for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    sys.exit(1)
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_1:
                         self.add_player(player1)
@@ -232,7 +239,7 @@ class MainApp(object):
                         selection_done = True
                     if self.game_status_is_saved() and event.key == pygame.K_c:
                         self.load_game_status()
-                        return self.startgame()
+                        return self.startgame(pause=True)
                     if event.key == pygame.K_ESCAPE:
                         sys.exit(1)
         return self.startgame()
@@ -247,6 +254,7 @@ class MainApp(object):
                      'controls': (player.up, player.down, player.left, player.right),
                      'startpos': player.startpos,
                      'color': player.color,
+                     'initlength': player.initlength,
                      'length': player.length,
                      'score': player.score,
                      'body': player.body,
@@ -277,7 +285,8 @@ class MainApp(object):
         session_file = open('session.bf', 'rb')
         data = pickle.load(session_file)
         for player in data['players']:
-            pobj = Player(player['name'], player['controls'], self.screen, player['startpos'], player['color'], player['length'])
+            pobj = Player(player['name'], player['controls'], self.screen, player['startpos'], player['color'], player['initlength'])
+            pobj.length = player['length']
             pobj.score = player['score']
             pobj.body = player['body']
             pobj.dir_x = player['dir_x']
@@ -312,21 +321,47 @@ class MainApp(object):
         if not [player for player in self.players if player.playing]:
             self.running = False
 
+    def pause(self):
+        paused = True
+        text = self.font.render('PAUSED - press p to resume', True, GREEN)
+        textposx = (self.gamewidth / 2) - (text.get_size()[0] / 2)
+        textposy = (self.gameheight / 4) - (text.get_size()[1] / 2)
+        self.screen.blit(text, (textposx, textposy))
+        pygame.display.update(textposx, textposy, text.get_width(), text.get_height())
+        while paused:
+            self.clock.tick(self.framerate)
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    sys.exit(1)
+                    self.save_game_status()
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_p:
+                        paused = False
+                    elif event.key == pygame.K_ESCAPE:
+                        self.running = False
+                        self.save_game_status()
+                        paused = False
+                        return self.run()
+            
     def handle_events(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
+                self.save_game_status()
                 sys.exit(1)
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     self.running = False
                     self.save_game_status()
                     return self.run()
+                elif event.key == pygame.K_p:
+                    self.pause()
                 for player in self.players:
                     player.handle_key(event.key)
 
-    def startgame(self):
+    def startgame(self, pause=False):
         self.running = True
         while self.running:
+            self.handle_events()
             self.screen.fill(BLACK)
 
             self.draw_game_area()
@@ -336,17 +371,17 @@ class MainApp(object):
             self.clean_food()
             self.draw_food()
 
-            self.handle_events()
-
             pygame.display.flip()
             self.clock.tick(self.framerate)
+            if pause:
+                self.pause()
+                pause = False
         if not self.running:
             self.play_again()
 
     def play_again(self):
-        font = pygame.font.Font(None, 25)
         self.screen.fill(BLACK)
-        question = font.render('Play again? (y/n)', True, GREEN)
+        question = self.font.render('Play again? (y/n)', True, GREEN)
         self.screen.blit(question, (self.width/2 - question.get_size()[0] / 2, self.height/2 - question.get_size()[1] / 2))
         pygame.display.flip()
         asking = True
@@ -364,10 +399,8 @@ class MainApp(object):
 
     def reset_game_env(self):
         for player in self.players:
-            player.reset()
+            player.full_reset()
         self.food = []
 
 game = MainApp()
 game.run()
-
-#todo add pause support
