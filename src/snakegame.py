@@ -158,7 +158,7 @@ class Player(BaseSnake):
 class MainApp(object):
     width = 800
     height = 600
-    screen = pygame.display.set_mode((width, height), pygame.DOUBLEBUF)
+    screen = pygame.display.set_mode((width, height))
     clock = pygame.time.Clock()
     bgcolor = BLACK
     running = False
@@ -170,6 +170,11 @@ class MainApp(object):
     gamewidth = width
     gameheight = height - statusarea
     font = pygame.font.Font('freesansbold.ttf', 18)
+
+    def __init__(self):
+        pygame.display.set_caption('SnakeGame')
+        pygame.mouse.set_visible(0)
+
 
     def add_player(self, player):
         self.players.append(player)
@@ -191,7 +196,7 @@ class MainApp(object):
         drawn_players = []
         textxpos = 0
         for player in self.players:
-            lives = player.lives or 'DEAD'
+            lives = player.lives or 'GAME OVER'
             playerscore = "%s(%s): %sp" % (player.name, lives, player.score)
             playerstatus = self.font.render(playerscore, True, player.color)
             if drawn_players:
@@ -247,6 +252,7 @@ class MainApp(object):
                         return self.score_page()
                     elif event.key == pygame.K_ESCAPE:
                         sys.exit(1)
+        self.player_names_screen()
         return self.startgame()
 
     def game_status_is_saved(self):
@@ -459,6 +465,37 @@ class MainApp(object):
                     break
         pickle.dump(scores, open(SCORE_FILE_NAME, 'wb'))
 
+    def player_names_screen(self):
+        for i in range(0, len(self.players)):
+            player = self.players[i]
+            name = player.name
+            entering_name = True
+            while entering_name:
+                self.clock.tick(self.framerate)
+                self.screen.fill(BLACK)
+                text = 'Player %s name:    %s_' % (i + 1, name)
+                nametext = self.font.render(text, True, player.color)
+                self.screen.blit(nametext, (self.gamewidth / 4, self.gameheight / 4))
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        sys.exit(1)
+                    elif event.type == pygame.KEYDOWN:
+                        if event.key == pygame.K_RETURN:
+                            entering_name = False
+                        elif event.key == pygame.K_BACKSPACE:
+                            name = name[:-1]
+                            name = name.capitalize()
+                        elif event.key == pygame.K_ESCAPE:
+                            return self.run()
+                        else:
+                            try:
+                                name = name + chr(event.key)
+                                name = name.capitalize()
+                            except:
+                                pass
+                pygame.display.flip()
+            player.name = name
+
 game = MainApp()
 game.run()
 
@@ -466,4 +503,3 @@ game.run()
 # food moves
 # food can kill snake if it touches it's body and not it's mouth
 # two player co-op mode with shared score
-# players can input names
