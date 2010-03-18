@@ -173,8 +173,6 @@ class MainApp(object):
 
     def __init__(self):
         pygame.display.set_caption('SnakeGame')
-        pygame.mouse.set_visible(0)
-
 
     def add_player(self, player):
         self.players.append(player)
@@ -221,7 +219,7 @@ class MainApp(object):
 
         if self.game_status_is_saved():
             text = 'Press c to continue previous game'
-            questiontext.insert(-1, self.font.render(text, True, GREEN))
+            questiontext.insert(-2, self.font.render(text, True, RED))
         
         textposx = self.width / 3
         textposy = self.height / 4
