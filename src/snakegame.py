@@ -28,7 +28,15 @@ class Food(object):
         self.set_points_worth()
 
     def set_points_worth(self):
-        self.points = 10
+        x_cartesian = (self.x - (game.gamewidth / 2)) / 10
+        y_cartesian = (self.y - (game.gameheight / 2)) / 10
+
+        def make_positive(i):
+            return i if i >=0 else i * -1
+        
+        x = make_positive(x_cartesian)
+        y = make_positive(y_cartesian)
+        self.points = (x + y) / 2
 
     def being_eaten(self, x, y):
         if self.bulk not in (1, 0):
@@ -44,9 +52,7 @@ class Food(object):
         self.eaten = True
 
     def nutritional_value(self):
-        if self.points > 10:
-            return 20
-        return 10
+        return self.points
 
     def draw(self):
         if self.bulk not in (1, 0):
@@ -206,8 +212,10 @@ class MainApp(object):
         self.players = []
         p1_controls = pygame.K_UP, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT
         p2_controls = pygame.K_w, pygame.K_s, pygame.K_a, pygame.K_d
-        player1 = Player('Player 1', p1_controls, self.screen, (self.gamewidth/2, self.gameheight/2), WHITE, 50)
-        player2 = Player('Player 2', p2_controls, self.screen, (self.gamewidth/3, self.gameheight/3), RED, 50)
+        player1 = Player('Player 1', p1_controls, self.screen,
+                         (self.gamewidth/2, self.gameheight/2), WHITE, 50)
+        player2 = Player('Player 2', p2_controls, self.screen,
+                         (self.gamewidth/3, self.gameheight/3), RED, 50)
 
         self.screen.fill(BLACK)
         questiontext = [self.font.render('Press 1 for singleplayer', True, GREEN),
@@ -294,7 +302,9 @@ class MainApp(object):
         session_file = open(SESSION_FILE_NAME, 'rb')
         data = pickle.load(session_file)
         for player in data['players']:
-            pobj = Player(player['name'], player['controls'], self.screen, player['startpos'], player['color'], player['initlength'])
+            pobj = Player(player['name'], player['controls'],
+                          self.screen, player['startpos'],
+                          player['color'], player['initlength'])
             pobj.length = player['length']
             pobj.score = player['score']
             pobj.body = player['body']
@@ -336,7 +346,8 @@ class MainApp(object):
         textposx = (self.gamewidth / 2) - (text.get_size()[0] / 2)
         textposy = (self.gameheight / 4) - (text.get_size()[1] / 2)
         self.screen.blit(text, (textposx, textposy))
-        pygame.display.update(textposx, textposy, text.get_width(), text.get_height())
+        pygame.display.update(textposx, textposy,
+                              text.get_width(), text.get_height())
         while paused:
             self.clock.tick(self.framerate)
             for event in pygame.event.get():
@@ -392,7 +403,10 @@ class MainApp(object):
     def play_again(self):
         self.screen.fill(BLACK)
         question = self.font.render('Play again? (y/n)', True, GREEN)
-        self.screen.blit(question, (self.width/2 - question.get_size()[0] / 2, self.height/2 - question.get_size()[1] / 2))
+        self.screen.blit(question,
+                         (self.width/2 - question.get_size()[0] / 2,
+                          self.height/2 - question.get_size()[1] / 2)
+                        )
         pygame.display.flip()
         asking = True
         while asking:
@@ -419,7 +433,9 @@ class MainApp(object):
         scoretext = []
         i = 1
         for name, score in scores:
-            scoretext.append(self.font.render('%s: %s - %s' % (i, name, score), True, GREEN))
+            s = '%s: %s - %s' % (i, name, score)
+            text = self.font.render(s, True, GREEN)
+            scoretext.append(text)
             i += 1
 
         textposx = self.width / 3
