@@ -25,6 +25,8 @@ class Food(object):
         self.color = GREEN
         self.points = 0
         self.eaten = False
+        self.dir_x = -1
+        self.dir_y = 1
         self.set_points_worth()
 
     def set_points_worth(self):
@@ -58,9 +60,38 @@ class Food(object):
         if self.bulk not in (1, 0):
             pygame.draw.rect(self.surface, self.color, (self.x, self.y,
                                                         self.bulk, self.bulk))
+            self.draw_legs()
         else:
             self.surface.set_at((self.x, self.y), self.color)
 
+    def draw_legs(self):
+        self.surface.set_at((self.x - 1, self.y - 1 ), self.color)
+        self.surface.set_at((self.x - 1, self.y + self.bulk), self.color)
+        self.surface.set_at((self.x + self.bulk, self.y - 1), self.color)
+        self.surface.set_at((self.x + self.bulk, self.y + self.bulk), self.color)
+    
+    def move(self):
+        def coord_in_players(x, y):
+            for player in game.players:
+                if (self.x, self.y) in player.body:
+                    return True
+                if (self.x + self.bulk, self.y + self.bulk) in player.body:
+                    return True
+
+        if bool(random.randint(0, 1)):
+            self.dir_x = random.randint(-1, 1)
+            self.dir_y = random.randint(-1, 1)
+
+        self.x += self.dir_x
+        self.y += self.dir_y
+
+        if self.x > self.bulk and self.x < game.gamewidth - self.bulk and \
+           self.y > self.bulk and self.y < game.gameheight - self.bulk and \
+           not coord_in_players(self.x, self.y):
+            return
+        else:
+            self.x += self.dir_x * -1
+            self.y += self.dir_y * -1
 
 class BaseSnake(object):
 
@@ -77,6 +108,7 @@ class BaseSnake(object):
         self.score = 0
         self.color = color
         self.speed = 2
+
     def move(self):
 
         self.crashed = self.check_crash(self.x + self.dir_x * self.speed,
@@ -92,6 +124,19 @@ class BaseSnake(object):
     def draw(self):
         for coord in self.body:
             self.surface.set_at(coord, self.color)
+        self.draw_mouth()
+
+    def draw_mouth(self):
+        if not self.body:
+            return
+        head = self.body[0]
+        for i in range(1, 2):
+            if self.dir_y == 0:
+                self.surface.set_at((head[0] + (i * self.dir_x), head[1] - i), self.color)
+                self.surface.set_at((head[0] + (i * self.dir_x), head[1] + i), self.color)
+            elif self.dir_x == 0:
+                self.surface.set_at((head[0] - i, head[1] + (i * self.dir_y)), self.color)
+                self.surface.set_at((head[0] + i, head[1] + (i * self.dir_y)), self.color)
 
     def check_crash(self, x, y):
         if x >= game.gamewidth or y >= game.gameheight or x <= 0 or y <= 0:
@@ -192,6 +237,7 @@ class MainApp(object):
     def draw_food(self):
         for f in self.food:
             f.draw()
+            f.move()
 
     def draw_game_area(self):
         pygame.draw.rect(self.screen, WHITE, (0, 0, self.gamewidth, self.gameheight), 1)
@@ -210,6 +256,7 @@ class MainApp(object):
 
     def run(self):
         self.players = []
+        self.food = []
         p1_controls = pygame.K_UP, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT
         p2_controls = pygame.K_w, pygame.K_s, pygame.K_a, pygame.K_d
         player1 = Player('Player 1', p1_controls, self.screen,
@@ -301,6 +348,7 @@ class MainApp(object):
     def load_game_status(self):
         session_file = open(SESSION_FILE_NAME, 'rb')
         data = pickle.load(session_file)
+        self.players = []
         for player in data['players']:
             pobj = Player(player['name'], player['controls'],
                           self.screen, player['startpos'],
@@ -317,6 +365,7 @@ class MainApp(object):
             pobj.playing = player['playing']
             self.add_player(pobj)
 
+        self.food = []
         for food in data['food']:
             fobj = Food(self.screen)
             fobj.x = food['x']
@@ -399,6 +448,7 @@ class MainApp(object):
         if not self.running:
             self.save_scores()
             self.play_again()
+            return self.run()
 
     def play_again(self):
         self.screen.fill(BLACK)
@@ -514,6 +564,4 @@ game = MainApp()
 game.run()
 
 #todo:
-# food moves
-# food can kill snake if it touches it's body and not it's mouth
 # two player co-op mode with shared score
