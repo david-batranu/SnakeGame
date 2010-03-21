@@ -110,16 +110,13 @@ class BaseSnake(object):
         self.speed = 2
 
     def move(self):
-
-        self.crashed = self.check_crash(self.x + self.dir_x * self.speed,
-                                        self.y + self.dir_y * self.speed)
-
         for i in range(0, self.speed):
             self.x += self.dir_x
             self.y += self.dir_y
             self.body.insert(0, (self.x, self.y))
             if self.length != 0 and len(self.body) > self.length:
                 self.body.pop()
+        self.crashed = self.check_crash(self.x, self.y)
 
     def draw(self):
         for coord in self.body:
@@ -143,7 +140,7 @@ class BaseSnake(object):
             return True
 
         for player in game.players:
-            if (x, y) in player.body:
+            if (x, y) in player.body[1:]:
                 return True
         return False
 
