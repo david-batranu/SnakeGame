@@ -108,14 +108,26 @@ class BaseSnake(object):
         self.score = 0
         self.color = color
         self.speed = 2
+        self.time = 0
+        self.cycles = 0
 
     def move(self):
-        for i in range(0, self.speed):
-            self.x += self.dir_x
-            self.y += self.dir_y
-            self.body.insert(0, (self.x, self.y))
-            if self.length != 0 and len(self.body) > self.length:
-                self.body.pop()
+        curr_time = pygame.time.get_ticks()
+        time_passed = curr_time - self.time
+        if not time_passed > 10:
+            return
+        else:
+            self.cycles = time_passed / 10
+            self.time = curr_time
+
+        for j in range(0, self.cycles):
+            for i in range(0, self.speed):
+                self.x += self.dir_x
+                self.y += self.dir_y
+                self.body.insert(0, (self.x, self.y))
+                if self.length != 0 and len(self.body) > self.length:
+                    self.body.pop()
+
         self.crashed = self.check_crash(self.x, self.y)
 
     def draw(self):
