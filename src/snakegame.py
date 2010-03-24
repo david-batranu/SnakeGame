@@ -107,12 +107,21 @@ class BaseSnake(object):
         self.crashed = False
         self.score = 0
         self.color = color
-        self.speed = 2
+        self.speed = 1
         self.time = 0
         self.cycles = 0
 
+    def set_difficulty(self):
+        if self.score > 1000:
+            self.speed = 2
+        if self.score > 2000:
+            self.speed = 3
+        
     def move(self):
+        self.set_difficulty()
         curr_time = pygame.time.get_ticks()
+        if self.time == 0:
+            self.time = curr_time
         time_passed = curr_time - self.time
         if not time_passed > 10:
             return
@@ -229,6 +238,7 @@ class MainApp(object):
     framerate = 60
     gamewidth = width
     gameheight = height - statusarea
+    difficulty = 'normal'
     font = pygame.font.Font('freesansbold.ttf', 18)
 
     def __init__(self):
@@ -246,7 +256,8 @@ class MainApp(object):
     def draw_food(self):
         for f in self.food:
             f.draw()
-            f.move()
+            if self.difficulty == 'hard':
+                f.move()
 
     def draw_game_area(self):
         pygame.draw.rect(self.screen, WHITE, (0, 0, self.gamewidth, self.gameheight), 1)
@@ -276,8 +287,8 @@ class MainApp(object):
         self.screen.fill(BLACK)
         questiontext = [self.font.render('Press 1 for singleplayer', True, GREEN),
                         self.font.render('Press 2 for 2-player mode.', True, GREEN),
-                        self.font.render('Player 1 controls: directional keys;', True, GREEN),
-                        self.font.render('Player 2 controls: WSAD keys.', True, GREEN),
+                        self.font.render('Player 1 controls: directional keys;', True, BLUE),
+                        self.font.render('Player 2 controls: WSAD keys.', True, BLUE),
                         self.font.render('ESC = exit game', True, GREEN),
                         self.font.render('F1 = view high scores', True, GREEN)]
 
@@ -315,16 +326,18 @@ class MainApp(object):
                     elif event.key == pygame.K_ESCAPE:
                         sys.exit(1)
         self.player_names_screen()
-        return self.startgame()
+        self.select_difficulty_screen()
+        self.startgame()
 
     def game_status_is_saved(self):
         return os.path.isfile(SESSION_FILE_NAME)
     
     def save_game_status(self):
-        data = {'players': [], 'food': []}
+        data = {'players': [], 'food': [], 'game': {}}
         for player in self.players:
             pdata = {'name': player.name,
                      'controls': (player.up, player.down, player.left, player.right),
+                     'speed': player.speed,
                      'startpos': player.startpos,
                      'color': player.color,
                      'initlength': player.initlength,
@@ -350,7 +363,9 @@ class MainApp(object):
                      'eaten': food.eaten,
                      }
             data['food'].append(fdata)
-        
+
+        data['game']['difficulty'] = game.difficulty
+
         session_file = open(SESSION_FILE_NAME, 'wb')
         pickle.dump(data, session_file)
     
@@ -368,6 +383,7 @@ class MainApp(object):
             pobj.dir_x = player['dir_x']
             pobj.dir_y = player['dir_y']
             pobj.lives = player['lives']
+            pobj.speed = player['speed']
             pobj.x = player['x']
             pobj.y = player['y']
             pobj.crashed = player['crashed']
@@ -384,6 +400,8 @@ class MainApp(object):
             fobj.points = food['points']
             fobj.eaten = food['eaten']
             self.food.append(fobj)
+        
+        game.difficulty = data['game']['difficulty']
 
     def draw_players(self):
         for player in self.players:
@@ -420,6 +438,8 @@ class MainApp(object):
                         self.save_game_status()
                         paused = False
                         return self.run()
+        for player in self.players:
+            player.time = 0
             
     def handle_events(self):
         for event in pygame.event.get():
@@ -568,6 +588,31 @@ class MainApp(object):
                                 pass
                 pygame.display.flip()
             player.name = name
+
+    def select_difficulty_screen(self):
+        selecting = True
+        while selecting:
+            self.clock.tick(self.framerate)
+            self.screen.fill(BLACK)
+            text = 'Press 1 for normal difficulty or 2 for hard difficulty'
+            nametext = self.font.render(text, True, GREEN)
+            self.screen.blit(nametext, (self.gamewidth / 4, self.gameheight / 4))
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    sys.exit(1)
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_1:
+                        self.difficulty = 'normal'
+                        selecting = False
+                    elif event.key == pygame.K_2:
+                        self.difficulty = 'hard'
+                        selecting = False
+                    elif event.key == pygame.K_ESCAPE:
+                        return self.run()
+            pygame.display.flip()
+        if self.difficulty == 'hard':
+            for player in self.players:
+                player.speed = 2
 
 game = MainApp()
 game.run()
