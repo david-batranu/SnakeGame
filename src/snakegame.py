@@ -107,15 +107,15 @@ class BaseSnake(object):
         self.crashed = False
         self.score = 0
         self.color = color
-        self.speed = 1
+        self.speed = 16 #ms
         self.time = 0
         self.cycles = 0
 
     def set_difficulty(self):
         if self.score > 1000:
-            self.speed = 2
+            self.speed = 8
         if self.score > 2000:
-            self.speed = 3
+            self.speed = 4
         
     def move(self):
         self.set_difficulty()
@@ -123,19 +123,18 @@ class BaseSnake(object):
         if self.time == 0:
             self.time = curr_time
         time_passed = curr_time - self.time
-        if not time_passed > 10:
+        if not time_passed > self.speed:
             return
         else:
-            self.cycles = time_passed / 10
+            self.cycles = time_passed / self.speed
             self.time = curr_time
 
-        for j in range(0, self.cycles):
-            for i in range(0, self.speed):
-                self.x += self.dir_x
-                self.y += self.dir_y
-                self.body.insert(0, (self.x, self.y))
-                if self.length != 0 and len(self.body) > self.length:
-                    self.body.pop()
+        for i in range(self.cycles):
+            self.x += self.dir_x
+            self.y += self.dir_y
+            self.body.insert(0, (self.x, self.y))
+            if self.length != 0 and len(self.body) > self.length:
+                self.body.pop()
 
         self.crashed = self.check_crash(self.x, self.y)
 
