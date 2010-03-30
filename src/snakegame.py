@@ -185,7 +185,7 @@ class Player(BaseSnake):
             self.dir_y = -1 * self.bulk
             self.needs_to_move = True
         elif key == self.down:
-            if self.dir_y in (-1, self.bulk) or self.needs_to_move:
+            if self.dir_y in (-1, self.bulk * -1) or self.needs_to_move:
                 return
             self.dir_x = 0
             self.dir_y = 1 * self.bulk
@@ -197,7 +197,7 @@ class Player(BaseSnake):
             self.dir_y = 0
             self.needs_to_move = True
         elif key == self.right:
-            if self.dir_x in (-1, self.bulk) or self.needs_to_move:
+            if self.dir_x in (-1, self.bulk * -1) or self.needs_to_move:
                 return
             self.dir_x = 1 * self.bulk
             self.dir_y = 0
