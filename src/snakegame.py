@@ -315,16 +315,13 @@ class MainApp(object):
     
     def save_game_status(self):
         data = {'players': [], 'food': [], 'game': {}}
-        from pprint import pprint
         for player in self.players:
-            pprint(player.__dict__)
             pdata = player.__dict__
             for key in ['surface', 'time']:
                 del pdata[key]
             data['players'].append(pdata)
         
         for food in self.food:
-            pprint(food.__dict__)
             fdata = food.__dict__
             for key in ['surface']:
                 del fdata[key]
