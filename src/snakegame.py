@@ -17,21 +17,25 @@ SESSION_FILE_NAME = 'session.bf'
 SCORE_FILE_NAME = 'score.bf'
 
 class Food(object):
-    def __init__(self, surface, bulk=3):
+    def __init__(self, surface, bulk=10):
         self.surface = surface
         self.bulk = bulk
-        self.x = random.randrange(self.bulk, game.gamewidth - self.bulk)
-        self.y = random.randrange(self.bulk, game.gameheight - self.bulk)
         self.color = GREEN
         self.points = 0
         self.eaten = False
         self.dir_x = -1
         self.dir_y = 1
+        self.rect = self.build_rect()
         self.set_points_worth()
 
+    def build_rect(self):
+        x = random.randrange(self.bulk, game.gamewidth - self.bulk)
+        y = random.randrange(self.bulk, game.gameheight - self.bulk)
+        return pygame.Rect(x, y, self.bulk, self.bulk)
+
     def set_points_worth(self):
-        x_cartesian = (self.x - (game.gamewidth / 2)) / 10
-        y_cartesian = (self.y - (game.gameheight / 2)) / 10
+        x_cartesian = (self.rect.x - (game.gamewidth / 2)) / 10
+        y_cartesian = (self.rect.y - (game.gameheight / 2)) / 10
 
         def make_positive(i):
             return i if i >=0 else i * -1
@@ -40,62 +44,38 @@ class Food(object):
         y = make_positive(y_cartesian)
         self.points = (x + y) / 2
 
-    def being_eaten(self, x, y):
-        if self.bulk not in (1, 0):
-            if x < self.x or x > self.x + self.bulk:
-                return False
-            if y < self.y or y > self.y + self.bulk:
-                return False
-            return True
-        else:
-            return (x, y) == (self.x, self.y)
+    def being_eaten(self, rect):
+        return self.rect.colliderect(rect)
 
     def has_been_eaten(self):
         self.eaten = True
 
     def nutritional_value(self):
-        return self.points
+        return self.points / 10
 
     def draw(self):
-        if self.bulk not in (1, 0):
-            pygame.draw.rect(self.surface, self.color, (self.x, self.y,
-                                                        self.bulk, self.bulk))
-            self.draw_legs()
-        else:
-            self.surface.set_at((self.x, self.y), self.color)
+        pygame.draw.rect(self.surface, self.color, self.rect)
 
-    def draw_legs(self):
-        self.surface.set_at((self.x - 1, self.y - 1 ), self.color)
-        self.surface.set_at((self.x - 1, self.y + self.bulk), self.color)
-        self.surface.set_at((self.x + self.bulk, self.y - 1), self.color)
-        self.surface.set_at((self.x + self.bulk, self.y + self.bulk), self.color)
-    
     def move(self):
-        def coord_in_players(x, y):
+        def rect_in_players():
             for player in game.players:
-                if (self.x, self.y) in player.body:
-                    return True
-                if (self.x + self.bulk, self.y + self.bulk) in player.body:
+                if self.rect.collidelist(player.body) != -1:
                     return True
 
         if bool(random.randint(0, 1)):
             self.dir_x = random.randint(-1, 1)
             self.dir_y = random.randint(-1, 1)
 
-        self.x += self.dir_x
-        self.y += self.dir_y
+        self.rect.x += self.dir_x
+        self.rect.y += self.dir_y
 
-        if self.x > self.bulk and self.x < game.gamewidth - self.bulk and \
-           self.y > self.bulk and self.y < game.gameheight - self.bulk and \
-           not coord_in_players(self.x, self.y):
-            return
-        else:
-            self.x += self.dir_x * -1
-            self.y += self.dir_y * -1
+        if not game.gamearea.contains(self.rect) or rect_in_players():
+            self.rect.x += self.dir_x * -1
+            self.rect.y += self.dir_y * -1
 
 class BaseSnake(object):
 
-    def __init__(self, surface, startpos, color, initlength=10):
+    def __init__(self, surface, startpos, color, initlength=10, bulk=10):
         self.surface = surface
         self.startpos = startpos
         self.initlength = initlength
@@ -103,19 +83,21 @@ class BaseSnake(object):
         self.body = []
         self.x, self.y = startpos
         self.dir_x = 0
-        self.dir_y = -1
+        self.dir_y = -1 * bulk
         self.crashed = False
         self.score = 0
+        self.bulk = bulk
         self.color = color
-        self.speed = 16 #ms
+        self.speed = 200 #ms
         self.time = 0
         self.cycles = 0
+        self.needs_to_move = False
 
     def set_difficulty(self):
+        if self.score > 500:
+            self.speed = 30
         if self.score > 1000:
-            self.speed = 8
-        if self.score > 2000:
-            self.speed = 4
+            self.speed = 20
         
     def move(self):
         self.set_difficulty()
@@ -132,41 +114,34 @@ class BaseSnake(object):
         for i in range(self.cycles):
             self.x += self.dir_x
             self.y += self.dir_y
-            self.body.insert(0, (self.x, self.y))
+            body_elem = pygame.Rect(self.x, self.y, self.bulk, self.bulk)
+            self.body.insert(0, body_elem)
             if self.length != 0 and len(self.body) > self.length:
                 self.body.pop()
 
-        self.crashed = self.check_crash(self.x, self.y)
+        self.crashed = self.check_crash()
+        self.needs_to_move = False
 
     def draw(self):
-        for coord in self.body:
-            self.surface.set_at(coord, self.color)
-        self.draw_mouth()
+        for rect in self.body:
+            pygame.draw.rect(self.surface, self.color, rect)
 
-    def draw_mouth(self):
-        if not self.body:
-            return
+    def check_crash(self):
         head = self.body[0]
-        for i in range(1, 2):
-            if self.dir_y == 0:
-                self.surface.set_at((head[0] + (i * self.dir_x), head[1] - i), self.color)
-                self.surface.set_at((head[0] + (i * self.dir_x), head[1] + i), self.color)
-            elif self.dir_x == 0:
-                self.surface.set_at((head[0] - i, head[1] + (i * self.dir_y)), self.color)
-                self.surface.set_at((head[0] + i, head[1] + (i * self.dir_y)), self.color)
-
-    def check_crash(self, x, y):
-        if x >= game.gamewidth or y >= game.gameheight or x <= 0 or y <= 0:
+        gamearea = game.gamearea
+        if not gamearea.contains(head):
             return True
-
         for player in game.players:
-            if (x, y) in player.body[1:]:
+            pbody = player.body[1:]
+            if head.collidelist(pbody) != -1:
                 return True
         return False
 
     def check_ate(self, food):
+        if not len(self.body):
+            return
         for f in food:
-            if f.being_eaten(self.x, self.y):
+            if f.being_eaten(self.body[0]):
                 self.score += f.points
                 self.length += f.nutritional_value()
                 f.has_been_eaten()
@@ -183,9 +158,10 @@ class Player(BaseSnake):
     def reset(self):
         self.body = []
         self.x, self.y = self.startpos
-        self.dir_x, self.dir_y = 0, -1
+        self.dir_x, self.dir_y = 0, -1 * self.bulk
         self.score = 0
-        self.crashed = self.playing = True
+        self.crashed = False
+        self.playing = True
     
     def full_reset(self):
         self.reset()
@@ -203,25 +179,29 @@ class Player(BaseSnake):
 
     def handle_key(self, key):
         if key == self.up:
-            if self.dir_y == 1:
+            if self.dir_y in (1, self.bulk) or self.needs_to_move:
                 return
             self.dir_x = 0
-            self.dir_y = -1
+            self.dir_y = -1 * self.bulk
+            self.needs_to_move = True
         elif key == self.down:
-            if self.dir_y == -1:
+            if self.dir_y in (-1, self.bulk) or self.needs_to_move:
                 return
             self.dir_x = 0
-            self.dir_y = 1
+            self.dir_y = 1 * self.bulk
+            self.needs_to_move = True
         elif key == self.left:
-            if self.dir_x == 1:
+            if self.dir_x in (1, self.bulk) or self.needs_to_move:
                 return
-            self.dir_x = -1
+            self.dir_x = -1 * self.bulk
             self.dir_y = 0
+            self.needs_to_move = True
         elif key == self.right:
-            if self.dir_x == -1:
+            if self.dir_x in (-1, self.bulk) or self.needs_to_move:
                 return
-            self.dir_x = 1
+            self.dir_x = 1 * self.bulk
             self.dir_y = 0
+            self.needs_to_move = True
 
 class MainApp(object):
     width = 800
@@ -237,6 +217,7 @@ class MainApp(object):
     framerate = 60
     gamewidth = width
     gameheight = height - statusarea
+    gamearea = None
     difficulty = 'normal'
     font = pygame.font.Font('freesansbold.ttf', 18)
 
@@ -259,7 +240,8 @@ class MainApp(object):
                 f.move()
 
     def draw_game_area(self):
-        pygame.draw.rect(self.screen, WHITE, (0, 0, self.gamewidth, self.gameheight), 1)
+        rect = pygame.draw.rect(self.screen, WHITE, (0, 0, self.gamewidth, self.gameheight), 1)
+        self.gamearea = rect
 
     def draw_status_area(self):
         drawn_players = []
@@ -279,9 +261,9 @@ class MainApp(object):
         p1_controls = pygame.K_UP, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT
         p2_controls = pygame.K_w, pygame.K_s, pygame.K_a, pygame.K_d
         player1 = Player('Player 1', p1_controls, self.screen,
-                         (self.gamewidth/2, self.gameheight/2), WHITE, 50)
+                         (self.gamewidth/2, self.gameheight/2), WHITE, 10)
         player2 = Player('Player 2', p2_controls, self.screen,
-                         (self.gamewidth/3, self.gameheight/3), RED, 50)
+                         (self.gamewidth/3, self.gameheight/3), RED, 10)
 
         self.screen.fill(BLACK)
         questiontext = [self.font.render('Press 1 for singleplayer', True, GREEN),
@@ -333,34 +315,19 @@ class MainApp(object):
     
     def save_game_status(self):
         data = {'players': [], 'food': [], 'game': {}}
+        from pprint import pprint
         for player in self.players:
-            pdata = {'name': player.name,
-                     'controls': (player.up, player.down, player.left, player.right),
-                     'speed': player.speed,
-                     'startpos': player.startpos,
-                     'color': player.color,
-                     'initlength': player.initlength,
-                     'length': player.length,
-                     'score': player.score,
-                     'body': player.body,
-                     'dir_x': player.dir_x,
-                     'dir_y': player.dir_y,
-                     'lives': player.lives,
-                     'x': player.x,
-                     'y': player.y,
-                     'crashed': player.crashed,
-                     'playing': player.playing,
-                     }
+            pprint(player.__dict__)
+            pdata = player.__dict__
+            for key in ['surface', 'time']:
+                del pdata[key]
             data['players'].append(pdata)
         
         for food in self.food:
-            fdata = {'x': food.x,
-                     'y': food.y,
-                     'bulk': food.bulk,
-                     'color': food.color,
-                     'points': food.points,
-                     'eaten': food.eaten,
-                     }
+            pprint(food.__dict__)
+            fdata = food.__dict__
+            for key in ['surface']:
+                del fdata[key]
             data['food'].append(fdata)
 
         data['game']['difficulty'] = game.difficulty
@@ -373,31 +340,18 @@ class MainApp(object):
         data = pickle.load(session_file)
         self.players = []
         for player in data['players']:
-            pobj = Player(player['name'], player['controls'],
-                          self.screen, player['startpos'],
+            controls = player['up'], player['down'], player['left'], player['right']
+            pobj = Player(player['name'], controls, self.screen, player['startpos'],
                           player['color'], player['initlength'])
-            pobj.length = player['length']
-            pobj.score = player['score']
-            pobj.body = player['body']
-            pobj.dir_x = player['dir_x']
-            pobj.dir_y = player['dir_y']
-            pobj.lives = player['lives']
-            pobj.speed = player['speed']
-            pobj.x = player['x']
-            pobj.y = player['y']
-            pobj.crashed = player['crashed']
-            pobj.playing = player['playing']
+            for key, value in player.items():
+                setattr(pobj, key, value)
             self.add_player(pobj)
 
         self.food = []
         for food in data['food']:
             fobj = Food(self.screen)
-            fobj.x = food['x']
-            fobj.y = food['y']
-            fobj.bulk = food['bulk']
-            fobj.color = food['color']
-            fobj.points = food['points']
-            fobj.eaten = food['eaten']
+            for key, value in food.items():
+                setattr(fobj, key, value)
             self.food.append(fobj)
         
         game.difficulty = data['game']['difficulty']
@@ -611,7 +565,7 @@ class MainApp(object):
             pygame.display.flip()
         if self.difficulty == 'hard':
             for player in self.players:
-                player.speed = 2
+                player.speed = 50
 
 game = MainApp()
 game.run()
