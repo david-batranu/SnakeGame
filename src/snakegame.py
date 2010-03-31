@@ -15,6 +15,69 @@ BLUE = 0, 0, 255
 
 SESSION_FILE_NAME = 'session.bf'
 SCORE_FILE_NAME = 'score.bf'
+BACKGROUND = 'img/grass.jpg'
+
+HEAD_DU = 'img/head_du.png'
+HEAD_UD = 'img/head_ud.png'
+HEAD_LR = 'img/head_lr.png'
+HEAD_RL = 'img/head_rl.png'
+
+BODY_HORIZ = 'img/body_horiz.png'
+BODY_VERT = 'img/body_vert.png'
+
+FLEX_LDDL = 'img/lddl.png'
+FLEX_LUUL = 'img/luul.png'
+FLEX_RDDR = 'img/rddr.png'
+FLEX_RUUR = 'img/ruur.png'
+
+TAIL_DU = 'img/tail_du.png'
+TAIL_UD = 'img/tail_ud.png'
+TAIL_LR = 'img/tail_lr.png'
+TAIL_RL = 'img/tail_rl.png'
+
+
+HEAD_DU = pygame.image.load(HEAD_DU)
+HEAD_DU.set_colorkey((255, 255, 255))
+
+HEAD_UD = pygame.image.load(HEAD_UD)
+HEAD_UD.set_colorkey((255, 255, 255))
+
+HEAD_LR = pygame.image.load(HEAD_LR)
+HEAD_LR.set_colorkey((255, 255, 255))
+
+HEAD_RL = pygame.image.load(HEAD_RL)
+HEAD_RL.set_colorkey((255, 255, 255))
+
+BODY_HORIZ = pygame.image.load(BODY_HORIZ)
+BODY_HORIZ.set_colorkey((255, 255, 255))
+
+BODY_VERT = pygame.image.load(BODY_VERT)
+BODY_VERT.set_colorkey((255, 255, 255))
+
+FLEX_LDDL = pygame.image.load(FLEX_LDDL)
+FLEX_LDDL.set_colorkey((255, 255, 255))
+
+FLEX_LUUL = pygame.image.load(FLEX_LUUL)
+FLEX_LUUL.set_colorkey((255, 255, 255))
+
+FLEX_RDDR = pygame.image.load(FLEX_RDDR)
+FLEX_RDDR.set_colorkey((255, 255, 255))
+
+FLEX_RUUR = pygame.image.load(FLEX_RUUR)
+FLEX_RUUR.set_colorkey((255, 255, 255))
+
+TAIL_DU = pygame.image.load(TAIL_DU)
+TAIL_DU.set_colorkey((255, 255, 255))
+
+TAIL_UD = pygame.image.load(TAIL_UD)
+TAIL_UD.set_colorkey((255, 255, 255))
+
+TAIL_LR = pygame.image.load(TAIL_LR)
+TAIL_LR.set_colorkey((255, 255, 255))
+
+TAIL_RL = pygame.image.load(TAIL_RL)
+TAIL_RL.set_colorkey((255, 255, 255))
+
 
 class Food(object):
     def __init__(self, surface, bulk=10):
@@ -88,7 +151,7 @@ class BaseSnake(object):
         self.score = 0
         self.bulk = bulk
         self.color = color
-        self.speed = 200 #ms
+        self.speed = 160 #ms
         self.time = 0
         self.cycles = 0
         self.needs_to_move = False
@@ -123,8 +186,72 @@ class BaseSnake(object):
         self.needs_to_move = False
 
     def draw(self):
-        for rect in self.body:
-            pygame.draw.rect(self.surface, self.color, rect)
+        if not self.body:
+            return
+        body_length = len(self.body)
+        for i in range(body_length):
+            if i != 0:
+                prev = self.body[i - 1]
+            else:
+                prev = None
+            me = self.body[i]
+            try:
+                next = self.body[i + 1]
+            except IndexError:
+                next = None
+
+            if not prev and next:
+                if me.x < next.x:
+                    img = HEAD_LR.convert()
+                elif me.x > next.x:
+                    img = HEAD_RL.convert()
+                elif me.y < next.y:
+                    img = HEAD_UD.convert()
+                elif me.y > next.y:
+                    img = HEAD_DU.convert()
+
+                self.surface.blit(img, self.body[i])
+
+
+            if next and prev:
+                if me.x < next.x and me.y < prev.y or \
+                    me.x < prev.x and me.y < next.y:
+                    img = FLEX_RDDR.convert()
+                    self.surface.blit(img, self.body[i])
+
+                elif me.x < next.x and me.y > prev.y or \
+                    me.x < prev.x and me.y > next.y:
+                    img = FLEX_RUUR.convert()
+                    self.surface.blit(img, self.body[i])
+
+                elif me.x > next.x and me.y > prev.y or \
+                    me.x > prev.x and me.y > next.y:
+                    img = FLEX_LUUL.convert()
+                    self.surface.blit(img, self.body[i])
+
+                elif me.x > next.x and me.y < prev.y or \
+                    me.x > prev.x and me.y < next.y:
+                    img = FLEX_LDDL.convert()
+                    self.surface.blit(img, self.body[i])
+
+                elif me.x == prev.x == next.x:
+                    img = BODY_VERT.convert()
+                    self.surface.blit(img, self.body[i])
+
+                elif me.y == prev.y == next.y:
+                    img = BODY_HORIZ.convert()
+                    self.surface.blit(img, self.body[i])
+
+            if not next and prev:
+                if me.x > prev.x:
+                    img = TAIL_LR.convert()
+                elif me.x < prev.x:
+                    img = TAIL_RL.convert()
+                elif me.y > prev.y:
+                    img = TAIL_UD.convert()
+                elif me.y < prev.y:
+                    img = TAIL_DU.convert()
+                self.surface.blit(img, self.body[i])
 
     def check_crash(self):
         head = self.body[0]
@@ -220,6 +347,7 @@ class MainApp(object):
     gamearea = None
     difficulty = 'normal'
     font = pygame.font.Font('freesansbold.ttf', 18)
+    background = pygame.image.load(BACKGROUND).convert()
 
     def __init__(self):
         pygame.display.set_caption('SnakeGame')
@@ -410,7 +538,8 @@ class MainApp(object):
         self.running = True
         while self.running:
             self.handle_events()
-            self.screen.fill(BLACK)
+            #self.screen.fill(BLACK)
+            self.screen.blit(self.background, (0, 0))
 
             self.draw_game_area()
             self.draw_status_area()
