@@ -16,67 +16,7 @@ BLUE = 0, 0, 255
 SESSION_FILE_NAME = 'session.bf'
 SCORE_FILE_NAME = 'score.bf'
 BACKGROUND = 'img/grass.jpg'
-
-HEAD_DU = 'img/head_du.png'
-HEAD_UD = 'img/head_ud.png'
-HEAD_LR = 'img/head_lr.png'
-HEAD_RL = 'img/head_rl.png'
-
-BODY_HORIZ = 'img/body_horiz.png'
-BODY_VERT = 'img/body_vert.png'
-
-FLEX_LDDL = 'img/lddl.png'
-FLEX_LUUL = 'img/luul.png'
-FLEX_RDDR = 'img/rddr.png'
-FLEX_RUUR = 'img/ruur.png'
-
-TAIL_DU = 'img/tail_du.png'
-TAIL_UD = 'img/tail_ud.png'
-TAIL_LR = 'img/tail_lr.png'
-TAIL_RL = 'img/tail_rl.png'
-
-
-HEAD_DU = pygame.image.load(HEAD_DU)
-HEAD_DU.set_colorkey((255, 255, 255))
-
-HEAD_UD = pygame.image.load(HEAD_UD)
-HEAD_UD.set_colorkey((255, 255, 255))
-
-HEAD_LR = pygame.image.load(HEAD_LR)
-HEAD_LR.set_colorkey((255, 255, 255))
-
-HEAD_RL = pygame.image.load(HEAD_RL)
-HEAD_RL.set_colorkey((255, 255, 255))
-
-BODY_HORIZ = pygame.image.load(BODY_HORIZ)
-BODY_HORIZ.set_colorkey((255, 255, 255))
-
-BODY_VERT = pygame.image.load(BODY_VERT)
-BODY_VERT.set_colorkey((255, 255, 255))
-
-FLEX_LDDL = pygame.image.load(FLEX_LDDL)
-FLEX_LDDL.set_colorkey((255, 255, 255))
-
-FLEX_LUUL = pygame.image.load(FLEX_LUUL)
-FLEX_LUUL.set_colorkey((255, 255, 255))
-
-FLEX_RDDR = pygame.image.load(FLEX_RDDR)
-FLEX_RDDR.set_colorkey((255, 255, 255))
-
-FLEX_RUUR = pygame.image.load(FLEX_RUUR)
-FLEX_RUUR.set_colorkey((255, 255, 255))
-
-TAIL_DU = pygame.image.load(TAIL_DU)
-TAIL_DU.set_colorkey((255, 255, 255))
-
-TAIL_UD = pygame.image.load(TAIL_UD)
-TAIL_UD.set_colorkey((255, 255, 255))
-
-TAIL_LR = pygame.image.load(TAIL_LR)
-TAIL_LR.set_colorkey((255, 255, 255))
-
-TAIL_RL = pygame.image.load(TAIL_RL)
-TAIL_RL.set_colorkey((255, 255, 255))
+SNAKES = 'img/snakes.png'
 
 
 class Food(object):
@@ -155,6 +95,27 @@ class BaseSnake(object):
         self.time = 0
         self.cycles = 0
         self.needs_to_move = False
+        self.define_body_elements()
+
+    def define_body_elements(self):
+        pos = (self.number * self.bulk) - self.bulk
+        self.head_ud = pygame.Rect(0, pos, self.bulk, self.bulk)
+        self.head_du = pygame.Rect(1 * self.bulk, pos, self.bulk, self.bulk)
+        self.head_lr = pygame.Rect(2 * self.bulk, pos, self.bulk, self.bulk)
+        self.head_rl = pygame.Rect(3 * self.bulk, pos, self.bulk, self.bulk)
+        
+        self.body_horiz = pygame.Rect(4 * self.bulk, pos, self.bulk, self.bulk)
+        self.body_vert = pygame.Rect(5 * self.bulk, pos, self.bulk, self.bulk)
+
+        self.flex_rddr = pygame.Rect(6 * self.bulk, pos, self.bulk, self.bulk)
+        self.flex_luul = pygame.Rect(7 * self.bulk, pos, self.bulk, self.bulk)
+        self.flex_ruur = pygame.Rect(8 * self.bulk, pos, self.bulk, self.bulk)
+        self.flex_lddl = pygame.Rect(9 * self.bulk, pos, self.bulk, self.bulk)
+
+        self.tail_ud = pygame.Rect(10 * self.bulk, pos, self.bulk, self.bulk)
+        self.tail_du = pygame.Rect(11 * self.bulk, pos, self.bulk, self.bulk)
+        self.tail_lr = pygame.Rect(12 * self.bulk, pos, self.bulk, self.bulk)
+        self.tail_rl = pygame.Rect(13 * self.bulk, pos, self.bulk, self.bulk)
 
     def set_difficulty(self):
         if self.score > 500:
@@ -202,13 +163,13 @@ class BaseSnake(object):
 
             if not prev and next:
                 if me.x < next.x:
-                    img = HEAD_LR.convert()
+                    img = game.snakes.subsurface(self.head_lr)
                 elif me.x > next.x:
-                    img = HEAD_RL.convert()
+                    img = game.snakes.subsurface(self.head_rl)
                 elif me.y < next.y:
-                    img = HEAD_UD.convert()
+                    img = game.snakes.subsurface(self.head_ud)
                 elif me.y > next.y:
-                    img = HEAD_DU.convert()
+                    img = game.snakes.subsurface(self.head_du)
 
                 self.surface.blit(img, self.body[i])
 
@@ -216,41 +177,38 @@ class BaseSnake(object):
             if next and prev:
                 if me.x < next.x and me.y < prev.y or \
                     me.x < prev.x and me.y < next.y:
-                    img = FLEX_RDDR.convert()
-                    self.surface.blit(img, self.body[i])
+                    img = game.snakes.subsurface(self.flex_rddr)
 
                 elif me.x < next.x and me.y > prev.y or \
                     me.x < prev.x and me.y > next.y:
-                    img = FLEX_RUUR.convert()
-                    self.surface.blit(img, self.body[i])
+                    img = game.snakes.subsurface(self.flex_ruur)
 
                 elif me.x > next.x and me.y > prev.y or \
                     me.x > prev.x and me.y > next.y:
-                    img = FLEX_LUUL.convert()
-                    self.surface.blit(img, self.body[i])
+                    img = game.snakes.subsurface(self.flex_luul)
 
                 elif me.x > next.x and me.y < prev.y or \
                     me.x > prev.x and me.y < next.y:
-                    img = FLEX_LDDL.convert()
-                    self.surface.blit(img, self.body[i])
+                    img = game.snakes.subsurface(self.flex_lddl)
 
                 elif me.x == prev.x == next.x:
-                    img = BODY_VERT.convert()
-                    self.surface.blit(img, self.body[i])
+                    img = game.snakes.subsurface(self.body_vert)
 
                 elif me.y == prev.y == next.y:
-                    img = BODY_HORIZ.convert()
-                    self.surface.blit(img, self.body[i])
+                    img = game.snakes.subsurface(self.body_horiz)
+
+                self.surface.blit(img, self.body[i])
 
             if not next and prev:
                 if me.x > prev.x:
-                    img = TAIL_LR.convert()
+                    img = game.snakes.subsurface(self.tail_lr)
                 elif me.x < prev.x:
-                    img = TAIL_RL.convert()
+                    img = game.snakes.subsurface(self.tail_rl)
                 elif me.y > prev.y:
-                    img = TAIL_UD.convert()
+                    img = game.snakes.subsurface(self.tail_ud)
                 elif me.y < prev.y:
-                    img = TAIL_DU.convert()
+                    img = game.snakes.subsurface(self.tail_du)
+                    
                 self.surface.blit(img, self.body[i])
 
     def check_crash(self):
@@ -275,8 +233,9 @@ class BaseSnake(object):
 
 
 class Player(BaseSnake):
-    def __init__(self, name, controls, *args):
+    def __init__(self, name, controls, number, *args):
         self.name = name
+        self.number = number
         self.lives = 3
         self.playing = True
         self.up, self.down, self.left, self.right = controls
@@ -348,9 +307,12 @@ class MainApp(object):
     difficulty = 'normal'
     font = pygame.font.Font('freesansbold.ttf', 18)
     background = pygame.image.load(BACKGROUND).convert()
+    snakes = pygame.image.load(SNAKES).convert()
 
     def __init__(self):
         pygame.display.set_caption('SnakeGame')
+        self.snakes.set_colorkey((255, 255, 255))
+
 
     def add_player(self, player):
         self.players.append(player)
@@ -388,9 +350,9 @@ class MainApp(object):
         self.food = []
         p1_controls = pygame.K_UP, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT
         p2_controls = pygame.K_w, pygame.K_s, pygame.K_a, pygame.K_d
-        player1 = Player('Player 1', p1_controls, self.screen,
+        player1 = Player('Player 1', p1_controls, 1, self.screen,
                          (self.gamewidth/2, self.gameheight/2), WHITE, 10)
-        player2 = Player('Player 2', p2_controls, self.screen,
+        player2 = Player('Player 2', p2_controls, 2, self.screen,
                          (self.gamewidth/3, self.gameheight/3), RED, 10)
 
         self.screen.fill(BLACK)
@@ -466,7 +428,7 @@ class MainApp(object):
         self.players = []
         for player in data['players']:
             controls = player['up'], player['down'], player['left'], player['right']
-            pobj = Player(player['name'], controls, self.screen, player['startpos'],
+            pobj = Player(player['name'], controls, player['number'], self.screen, player['startpos'],
                           player['color'], player['initlength'])
             for key, value in player.items():
                 setattr(pobj, key, value)
