@@ -17,10 +17,11 @@ SESSION_FILE_NAME = 'session.bf'
 SCORE_FILE_NAME = 'score.bf'
 BACKGROUND = 'img/grass.jpg'
 SNAKES = 'img/snakes.png'
+BUGS = 'img/bugs.png'
 
 
 class Food(object):
-    def __init__(self, surface, bulk=10):
+    def __init__(self, surface, bulk=20):
         self.surface = surface
         self.bulk = bulk
         self.color = GREEN
@@ -28,6 +29,10 @@ class Food(object):
         self.eaten = False
         self.dir_x = -1
         self.dir_y = 1
+        self.animation_pos = 0
+        self.animation_direction = 1
+        self.animation_speed = 160 #ms
+        self.time = 0
         self.rect = self.build_rect()
         self.set_points_worth()
 
@@ -57,7 +62,21 @@ class Food(object):
         return self.points / 10
 
     def draw(self):
-        pygame.draw.rect(self.surface, self.color, self.rect)
+        pos = self.animation_pos * self.bulk
+        self.surface.blit(game.bugs.subsurface(pos, 0, self.bulk, self.bulk), self.rect)
+        curr_time = pygame.time.get_ticks()
+        if self.time == 0:
+            self.time = curr_time
+        time_passed = curr_time - self.time
+        if not time_passed > self.animation_speed:
+            return
+        else:
+            self.time = curr_time
+        if pos + self.bulk >= game.bugs.get_width():
+            self.animation_direction = -1
+        elif self.animation_pos == 0:
+            self.animation_direction = 1
+        self.animation_pos += self.animation_direction
 
     def move(self):
         def rect_in_players():
@@ -78,7 +97,7 @@ class Food(object):
 
 class BaseSnake(object):
 
-    def __init__(self, surface, startpos, color, initlength=10, bulk=10):
+    def __init__(self, surface, startpos, color, initlength=10, bulk=20):
         self.surface = surface
         self.startpos = startpos
         self.initlength = initlength
@@ -253,6 +272,7 @@ class Player(BaseSnake):
         self.reset()
         self.length = self.initlength
         self.lives = 3
+        self.time = 0
 
     def handle_crash(self):
         self.lives -= 1
@@ -308,10 +328,12 @@ class MainApp(object):
     font = pygame.font.Font('freesansbold.ttf', 18)
     background = pygame.image.load(BACKGROUND).convert()
     snakes = pygame.image.load(SNAKES).convert()
+    bugs = pygame.image.load(BUGS).convert()
 
     def __init__(self):
         pygame.display.set_caption('SnakeGame')
         self.snakes.set_colorkey((255, 255, 255))
+        self.bugs.set_colorkey((255, 255, 255))
 
 
     def add_player(self, player):
@@ -413,7 +435,7 @@ class MainApp(object):
         
         for food in self.food:
             fdata = food.__dict__
-            for key in ['surface']:
+            for key in ['surface', 'time']:
                 del fdata[key]
             data['food'].append(fdata)
 
