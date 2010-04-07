@@ -136,14 +136,7 @@ class BaseSnake(object):
         self.tail_lr = pygame.Rect(12 * self.bulk, pos, self.bulk, self.bulk)
         self.tail_rl = pygame.Rect(13 * self.bulk, pos, self.bulk, self.bulk)
 
-    def set_difficulty(self):
-        if self.score > 500:
-            self.speed = 30
-        if self.score > 1000:
-            self.speed = 20
-        
     def move(self):
-        self.set_difficulty()
         curr_time = pygame.time.get_ticks()
         if self.time == 0:
             self.time = curr_time
@@ -247,6 +240,7 @@ class BaseSnake(object):
         for f in food:
             if f.being_eaten(self.body[0]):
                 self.score += f.points
+                self.speed -= 0.1
                 self.length += f.nutritional_value()
                 f.has_been_eaten()
 
