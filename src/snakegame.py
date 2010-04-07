@@ -147,7 +147,7 @@ class BaseSnake(object):
             self.cycles = time_passed / self.speed
             self.time = curr_time
 
-        for i in range(self.cycles):
+        for i in range(int(self.cycles)):
             self.x += self.dir_x
             self.y += self.dir_y
             body_elem = pygame.Rect(self.x, self.y, self.bulk, self.bulk)
